@@ -22,8 +22,8 @@ export class UrlService {
     private userRepository: Repository<User>,
   ) {}
 
-  async shortenUrl(shortenURLDto: ShortenURLDto) {
-    const { originalUrl, userId } = shortenURLDto;
+  async shortenUrl(shortenURLDto: ShortenURLDto, userId: number) {
+    const { originalUrl } = shortenURLDto;
 
     const urlCode = this.generateShortCode();
 
@@ -83,9 +83,9 @@ export class UrlService {
     return this.urlRepository.save(url);
   }
 
-  async delete(id: number, userId: number): Promise<void> {
+  async delete(urlCode: string, userId: number): Promise<void> {
     const url = await this.urlRepository.findOne({
-      where: { id, user: { id: userId }, deletedAt: null },
+      where: { urlCode, user: { id: userId }, deletedAt: null },
       relations: ['user'],
     });
     if (!url) {
@@ -107,12 +107,12 @@ export class UrlService {
   }
 
   async updateUrl(
-    id: number,
+    urlCode: string,
     userId: number,
     newOriginalUrl: string,
   ): Promise<Url> {
     const url = await this.urlRepository.findOne({
-      where: { id, user: { id: userId }, deletedAt: null },
+      where: { urlCode, user: { id: userId }, deletedAt: null },
       relations: ['user'],
     });
     if (!url) {

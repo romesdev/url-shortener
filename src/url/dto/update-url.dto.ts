@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional, IsUrl } from 'class-validator';
 
-export class ShortenURLDto {
+export class UpdateURLDto {
   @IsString()
   @IsNotEmpty()
   @IsUrl()

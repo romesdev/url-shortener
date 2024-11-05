@@ -18,8 +18,7 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column({ select: false })
-  @Exclude()
+  @Column()
   password: string;
 
   @OneToMany(() => Url, (url) => url.user)

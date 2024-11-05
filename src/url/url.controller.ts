@@ -13,30 +13,34 @@ import {
 import { UrlService } from './url.service';
 import { ShortenURLDto } from './dto/shorten-url.dto';
 import { JwtAuthGuard } from 'src/auth/jwt.auth.guard';
-import { UserService } from 'src/user/user.service';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { UpdateURLDto } from './dto/update-url.dto';
+import { OptionalJwtAuthGuard } from 'src/auth/jwt.optional.auth.guard';
 
-@Controller('urls')
+@Controller('')
+@ApiTags('urls')
+@ApiBearerAuth('access-token')
 export class UrlController {
-  constructor(
-    private readonly urlService: UrlService,
-    private readonly userService: UserService,
-  ) {}
+  constructor(private readonly urlService: UrlService) {}
 
-  @Post('shorten')
+  @Post('urls/shorten')
+  @UseGuards(OptionalJwtAuthGuard)
   async shortenUrl(
     @Body()
     shortenURLDto: ShortenURLDto,
+    @Request() req: any,
   ) {
-    return this.urlService.shortenUrl(shortenURLDto);
+    const userId = req.user.id ? req.user.id : undefined;
+    return this.urlService.shortenUrl(shortenURLDto, userId);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('list')
-  async listUserUrls(@Request() req) {
-    return this.urlService.listUserUrls(req.user.userId);
+  @Get('urls/list')
+  async listUserUrls(@Request() req: any) {
+    return this.urlService.listUserUrls(req.user.id);
   }
 
-  @Get('/:code')
+  @Get(':code')
   async redirect(
     @Res() res,
     @Param('code')
@@ -44,23 +48,29 @@ export class UrlController {
   ) {
     const url = await this.urlService.redirect(code);
 
+    console.log(url);
+
     return res.redirect(url.originalUrl);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Put('/:id')
+  @Put('urls/:code')
   async updateUrl(
-    @Param('id') id: number,
-    @Body() body: { url: string },
-    @Request() req,
+    @Param('code') code: string,
+    @Body() updateURLDto: UpdateURLDto,
+    @Request() req: any,
   ) {
-    return this.urlService.updateUrl(id, req.user.userId, body.url);
+    return this.urlService.updateUrl(
+      code,
+      req.user.id,
+      updateURLDto.originalUrl,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete('/:id')
-  async deleteUrl(@Param('id') id: number, @Request() req) {
-    await this.urlService.delete(id, req.user.userId);
+  @Delete('urls/:code')
+  async deleteUrl(@Param('code') code: string, @Request() req: any) {
+    await this.urlService.delete(code, req.user.id);
     return { message: 'URL deleted successfully' };
   }
 }
