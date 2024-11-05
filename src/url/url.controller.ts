@@ -48,8 +48,6 @@ export class UrlController {
   ) {
     const url = await this.urlService.redirect(code);
 
-    console.log(url);
-
     return res.redirect(url.originalUrl);
   }
 
