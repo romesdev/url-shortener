@@ -6,12 +6,12 @@ import {
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Url } from './url.entity';
-import { ShortenURLDto } from './dtos/url.dto';
+import { Url } from './entities/url.entity';
+import { ShortenURLDto } from './dto/shorten-url.dto';
 import { nanoid } from 'nanoid';
 import { isURL } from 'class-validator';
 import { BASE_URL } from 'src/utils/constants';
-import { User } from 'src/user/user.entity';
+import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class UrlService {
@@ -25,14 +25,19 @@ export class UrlService {
   async shortenUrl(shortenURLDto: ShortenURLDto) {
     const { originalUrl, userId } = shortenURLDto;
 
-    if (!userId) {
-      await this.userRepository.findOneBy({ id: userId });
-    }
-
-    const urlCode = nanoid(6);
+    const urlCode = this.generateShortCode();
 
     try {
-      let url = await this.urlRepository.findOneBy({ originalUrl });
+      let user = undefined;
+      if (userId) {
+        user = await this.userRepository.findOneBy({ id: userId });
+      }
+
+      let url = await this.urlRepository.findOneBy({
+        originalUrl,
+        user: user,
+      });
+
       if (url) return url.shortUrl;
 
       const shortUrl = `${BASE_URL}/${urlCode}`;
@@ -40,6 +45,7 @@ export class UrlService {
         urlCode,
         originalUrl,
         shortUrl,
+        user,
       });
 
       this.urlRepository.save(url);
@@ -49,12 +55,70 @@ export class UrlService {
     }
   }
 
+  async findByShortCode(urlCode: string): Promise<Url> {
+    const url = await this.urlRepository.findOne({
+      where: { urlCode, deletedAt: null },
+    });
+    if (!url) {
+      throw new NotFoundException('URL not found');
+    }
+    return url;
+  }
+
   async redirect(urlCode: string) {
     try {
       const url = await this.urlRepository.findOneBy({ urlCode });
-      if (url) return url;
+
+      if (url) {
+        await this.incrementVisits(url);
+        return url;
+      }
     } catch (error) {
       throw new NotFoundException('Resource Not Found');
     }
+  }
+
+  async incrementVisits(url: Url): Promise<Url> {
+    url.visits += 1;
+    return this.urlRepository.save(url);
+  }
+
+  async delete(id: number, userId: number): Promise<void> {
+    const url = await this.urlRepository.findOne({
+      where: { id, user: { id: userId }, deletedAt: null },
+      relations: ['user'],
+    });
+    if (!url) {
+      throw new NotFoundException('URL not found');
+    }
+    url.deletedAt = new Date();
+    await this.urlRepository.save(url);
+  }
+
+  private generateShortCode(): string {
+    return nanoid(6);
+  }
+
+  async listUserUrls(userId: number): Promise<Url[]> {
+    return this.urlRepository.find({
+      where: { user: { id: userId }, deletedAt: null },
+      relations: ['user'],
+    });
+  }
+
+  async updateUrl(
+    id: number,
+    userId: number,
+    newOriginalUrl: string,
+  ): Promise<Url> {
+    const url = await this.urlRepository.findOne({
+      where: { id, user: { id: userId }, deletedAt: null },
+      relations: ['user'],
+    });
+    if (!url) {
+      throw new NotFoundException('URL not found');
+    }
+    url.originalUrl = newOriginalUrl;
+    return this.urlRepository.save(url);
   }
 }

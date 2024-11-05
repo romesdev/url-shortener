@@ -1,4 +1,5 @@
-import { Url } from 'src/url/url.entity';
+import { Exclude } from 'class-transformer';
+import { Url } from 'src/url/entities/url.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -17,7 +18,8 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ select: false })
+  @Exclude()
   password: string;
 
   @OneToMany(() => Url, (url) => url.user)
