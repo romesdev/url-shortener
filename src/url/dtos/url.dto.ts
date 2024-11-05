@@ -1,7 +1,11 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUrl } from 'class-validator';
 
 export class ShortenURLDto {
   @IsString()
   @IsNotEmpty()
-  longUrl: string;
+  @IsUrl()
+  originalUrl: string;
+
+  @IsOptional()
+  userId?: number;
 }

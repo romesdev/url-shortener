@@ -9,9 +9,9 @@ export class UrlController {
   @Post('shorten')
   shortenUrl(
     @Body()
-    url: ShortenURLDto,
+    shortenURLDto: ShortenURLDto,
   ) {
-    return this.service.shortenUrl(url);
+    return this.service.shortenUrl(shortenURLDto);
   }
 
   @Get(':code')
@@ -22,6 +22,6 @@ export class UrlController {
   ) {
     const url = await this.service.redirect(code);
 
-    return res.redirect(url.longUrl);
+    return res.redirect(url.originalUrl);
   }
 }

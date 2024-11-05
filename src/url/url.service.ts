@@ -11,48 +11,49 @@ import { ShortenURLDto } from './dtos/url.dto';
 import { nanoid } from 'nanoid';
 import { isURL } from 'class-validator';
 import { BASE_URL } from 'src/utils/constants';
+import { User } from 'src/user/user.entity';
 
 @Injectable()
 export class UrlService {
   constructor(
     @InjectRepository(Url)
-    private repo: Repository<Url>,
+    private urlRepository: Repository<Url>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
 
-  async shortenUrl(url: ShortenURLDto) {
-    const { longUrl } = url;
+  async shortenUrl(shortenURLDto: ShortenURLDto) {
+    const { originalUrl, userId } = shortenURLDto;
 
-    if (!isURL(longUrl)) {
-      throw new BadRequestException('String Must be a Valid URL');
+    if (!userId) {
+      await this.userRepository.findOneBy({ id: userId });
     }
 
     const urlCode = nanoid(6);
 
     try {
-      let url = await this.repo.findOneBy({ longUrl });
+      let url = await this.urlRepository.findOneBy({ originalUrl });
       if (url) return url.shortUrl;
 
       const shortUrl = `${BASE_URL}/${urlCode}`;
-      url = this.repo.create({
+      url = this.urlRepository.create({
         urlCode,
-        longUrl,
+        originalUrl,
         shortUrl,
       });
 
-      this.repo.save(url);
+      this.urlRepository.save(url);
       return url.shortUrl;
     } catch (error) {
-      console.log(error);
       throw new UnprocessableEntityException('Server Error');
     }
   }
 
   async redirect(urlCode: string) {
     try {
-      const url = await this.repo.findOneBy({ urlCode });
+      const url = await this.urlRepository.findOneBy({ urlCode });
       if (url) return url;
     } catch (error) {
-      console.log(error);
       throw new NotFoundException('Resource Not Found');
     }
   }
